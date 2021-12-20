@@ -19,7 +19,8 @@ replyBody = "\n\n ^(I'm just a stupid bot (also a real person but idk)) ^(trying
 
 # Stuff...
 bannedWords = ["muck", "umck," "cmuk", "mcuk," "ucmk", "cumk", "kumc", "ukmc", "mkuc", "kmuc", "umkc", "mukc",
-               "mcku", "cmku", "kmcu", "mkcu", "ckmu", "kcmu", "kcum", "ckum", "ukcm", "kucm", "cukm", "uckm"]
+               "mcku", "cmku", "kmcu", "mkcu", "ckmu", "kcmu", "kcum", "ckum", "ukcm", "kucm", "cukm", "uckm",
+               "not giving a shit"]
 logfileName = "AlreadyRepliedToComments.txt"
 characterWhitelist = set('abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ')
 
@@ -31,45 +32,64 @@ def AddCommentIDToList(comment_id):
     file.write("\n")
     file.close()
 
-# Shut whoever is trying to Muck Chain up
-def TryToShutMucker():
-    reddit = praw.Reddit(           ####################
-        client_id=clientID,
-        client_secret=clientSecret, #Connect to Reddit#
-        password=password,
-        user_agent=userAgent,      ####################
-        username=username,
-    )
-    print(Fore.YELLOW + reddit.user.me().__str__()) # Print your username to verify the connections
 
-    desiredSub = reddit.subreddit(subName) # Choose the sub you want to destroy
+def process_comment(_comment, depth=0):
+    """Generate comment bodies and depths."""
+    yield _comment.body, depth
+    for _reply in _comment.replies:
+        # depth += 1
+        if depth == 2:
+            _reply.reply("Shut the fuck up")
+            print("Mucker has been shut up")
+            break
+        yield from process_comment(_reply, depth + 1)
 
-    print(Fore.LIGHTBLUE_EX + "We online bois") # more verification
-    print(Fore.LIGHTBLUE_EX + "Connected to subreddit of name: " + Fore.YELLOW + desiredSub.display_name) # even more verification
 
-    for comment in desiredSub.stream.comments(skip_existing=True):
-        # Check if comment is already replied to. Helps when testing, not in actual use
-        with open(logfileName) as logFile:
-            if comment.id in logFile.read():
-                print(Fore.YELLOW + "Comment has already been replied to")
-                continue
+def get_post_comments(post, more_limit=32):
+    """Get a list of (body, depth) pairs for the comments in the post."""
+    _comments = []
+    post.comments.replace_more(limit=more_limit)
+    for top_level in post.comments:
+        _comments.extend(process_comment(top_level))
+    return _comments
 
-        # convert all text to lower case for ease of use
-        commentBody = comment.body.lower()
-        # remove any symbols and weird shit
-        commentBodyLettersOnly = ''.join(filter(characterWhitelist.__contains__, commentBody))
-        # Loop over every muck variation and check if the comment contains one of them
-        for muckVariation in bannedWords:
-            if muckVariation in commentBodyLettersOnly:
-                comment.reply(muckReply + replyBody)
-                AddCommentIDToList(comment.id)
-                print(Fore.GREEN + "Mucker has been shut up")
 
 # Constantly run this shit
 while True:
     # Try to shut a mucker up
     try:
-        TryToShutMucker()
+        # TryToShutMucker()
+        # TryToShutChain()
+        reddit = praw.Reddit(
+            client_id=clientID,
+            client_secret=clientSecret,  # Connect to Reddit #
+            password=password,
+            user_agent=userAgent,
+            username=username,
+        )
+
+        subreddit = reddit.subreddit(subName)
+
+        print(Fore.YELLOW + reddit.user.me().__str__())
+        print(Fore.LIGHTBLUE_EX + "Connected to subreddit of name: " + Fore.YELLOW + subreddit.display_name)
+
+        # for submission in subreddit.stream.submissions():
+        #     for comment in submission.comments:
+        #         comment.replies.replace_more(limit=4)
+        #         if comment.replies[1] is not None:
+        #             reply = comment.replies[1]
+        #             reply.reply("Shut the fuck up please")
+        #             print("Mucker has been shut up")
+        #             break
+        #         else:
+        #             break
+
+        for submission in subreddit.stream.submissions():
+            comments = get_post_comments(post=submission, more_limit=10)
+            print(comments)
+            # for comment in comments:
+            #     if comment == ('muck', 3):
+            #         print("Mucker has been shut up")
 
     # If the user presses Control and C, exit the program/stop the bot
     except KeyboardInterrupt:  # Ctrl + C exits
