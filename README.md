@@ -3,7 +3,9 @@ An Anti-Muck bot made for r/DaniDev to stop the muck chains (or die trying). Ver
 
 # Prerequisites 
 1. Python3
-2. ...That's it
+2. Colorams
+3. Praw
+4. ...That's it
 
 # How to run
 1. Fill out the `topSecretInfo.py` needed info. You need a bit of knowledge (or google) to get some of the required stuff.
